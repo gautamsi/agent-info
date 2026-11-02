@@ -1,6 +1,6 @@
 {
   "name": "agent-info",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A one-line bar above the prompt with every running worker (subagents, background shells), its status, progress and estimated cost, plus a sessions pane with every session's cost by month. /agent-info to show it, /agent-info sessions for the pane.",
   "author": { "name": "Gautam Singh", "url": "https://github.com/gautamsi" },
   "homepage": "https://github.com/gautamsi/agent-info",

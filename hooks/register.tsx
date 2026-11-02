@@ -903,19 +903,45 @@ export const register: Register = on => {
       </Box>
     ) : Svg ? (
       (() => {
-        // The desktop does not truncate a Text, so the cost is chosen to fit
-        // what the critters and the bar leave (about 7 px a column).
-        const shown = v.visible.slice(-12)
-        const c = v.hasWorkers ? crittersSvg(shown, v.order, expanded ? 4 : 2) : null
-        const segments = cols < 110 && !expanded ? 12 : SEGMENTS
-        const b = barSvg(v.fraction, v.live > 0, v.isComplete, false, segments)
-        const head = `${v.visible.length > 12 ? `+${v.visible.length - 12} ` : ''}${count}`
-        const tail = v.hasWorkers ? 'done' : 'steps done'
-        const room = (cols - 8) * CHAR
+        // The picture is fitted to the band (about 7 px a column, the buttons
+        // kept clear): first a shorter cost, then a shorter bar, then smaller
+        // critters, then fewer of them (running ones kept, the rest as "+n").
+        const room = (cols - 14) * CHAR
         const accent = v.isComplete ? DONE : '#D97757'
-        const fits = (text: string) => lineSvg(c, head, tail, b, v.pct, text, accent).width <= room
-        const costText = v.costVariants.find(fits) ?? ''
-        const pic = lineSvg(c, head, tail, b, v.pct, costText, accent)
+        const tail = v.hasWorkers ? 'done' : 'steps done'
+        const sizes = expanded ? [4, 2] : [2]
+        const most = Math.min(12, v.visible.length)
+        const counts = [most, 8, 6, 4, 2, 0].filter((n, i, all) => n <= most && all.indexOf(n) === i)
+        const bars = (expanded || cols >= 110 ? [SEGMENTS, 12, 8] : [12, 8])
+        const build = (px: number, most: number, segments: number, costText: string) => {
+          // Keep the running ones, then the newest finished, in start order.
+          const keep = new Set(
+            [...v.visible.filter(isLive).slice(-most), ...v.visible.filter(w => !isLive(w)).reverse()]
+              .slice(0, most)
+              .map(w => w.id),
+          )
+          const shown = v.visible.filter(w => keep.has(w.id))
+          const c = v.hasWorkers && shown.length > 0 ? crittersSvg(shown, v.order, px) : null
+          const b = barSvg(v.fraction, v.live > 0, v.isComplete, false, segments)
+          const hidden = v.visible.length - shown.length
+          const head = `${v.hasWorkers && hidden > 0 && shown.length > 0 ? `+${hidden} ` : ''}${count}`
+          return { pic: lineSvg(c, head, tail, b, v.pct, costText, accent), head, costText }
+        }
+        let fitted: ReturnType<typeof build> | null = null
+        search: for (const most of v.hasWorkers ? counts : [0]) {
+          for (const px of sizes) {
+            for (const segments of bars) {
+              for (const text of v.costVariants) {
+                const tried = build(px, most, segments, text)
+                if (tried.pic.width <= room) {
+                  fitted = tried
+                  break search
+                }
+              }
+            }
+          }
+        }
+        const { pic, head, costText } = fitted ?? build(2, 0, 8, '')
         const alt = [`${head} ${tail}`, v.pct, costText].filter(Boolean).join(' · ')
         return (
           <Box flexDirection="row" alignItems="center" gap={1}>
@@ -966,17 +992,29 @@ export const register: Register = on => {
           const elapsed = clockOf((w.endedAt ?? v.t) - w.startedAt)
           const statusColor =
             w.status === 'running' ? 'warning' : w.status === 'waiting' ? 'suggestion' : w.status === 'done' ? 'success' : 'error'
+          // Narrow bands keep the task's name and drop the rest first: the
+          // agent type below 110 columns, the tool count below 90, the last
+          // tool below 120.
           const detail =
             w.kind === 'shell'
-              ? 'background shell'
-              : [`${w.steps} steps`, `${w.tools} tools`, isLive(w) && w.lastTool ? w.lastTool : ''].filter(Boolean).join(' · ')
+              ? cols >= 90
+                ? 'background shell'
+                : 'shell'
+              : [
+                  `${w.steps} steps`,
+                  cols >= 90 ? `${w.tools} tools` : '',
+                  cols >= 120 && isLive(w) && w.lastTool ? w.lastTool : '',
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
           const wCost = w.kind === 'shell' ? '' : w.isPriced ? `≈${money(w.usd)}` : w.steps > 0 ? 'cost ?' : ''
-          const fixed = 4 + w.type.length + 3 + 9 + elapsed.length + detail.length + wCost.length + 8
+          const type = cols >= 110 ? `${w.type} · ` : ''
+          const fixed = 2 + type.length + 2 + w.status.length + 1 + elapsed.length + 2 + detail.length + 2 + wCost.length + 4
           return (
             <Text>
               <Text color={colorOf(w, v.order)}>● </Text>
-              <Text dimColor>{w.type} · </Text>
-              <Text>{cut(w.label, Math.max(12, cols - fixed))}</Text>
+              {type !== '' ? <Text dimColor>{type}</Text> : ''}
+              <Text>{cut(w.label, Math.max(14, cols - fixed))}</Text>
               <Text color={statusColor}>
                 {'  '}
                 {w.status}

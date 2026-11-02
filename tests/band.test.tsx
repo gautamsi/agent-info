@@ -237,3 +237,25 @@ test('the sessions pane lists every session with its cost, forks counted from th
     await ui.unmount()
   }
 })
+
+test('in a narrow band the line shrinks to fit and the rows drop their details', async ($, on) => {
+  engine(on)
+  let n = 0
+  on('agent.spawn', () => ({ model: 'claude-sonnet-5-5', agentId: `w${++n}` }))
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+  for (const d of ['Design the profile sheet', 'Build missing pieces', 'Device check', 'Profile open', 'Fix check', 'Richer profile']) {
+    await $.agent.spawn({ prompt: d, description: d, subagentType: 'general-purpose' })
+  }
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop', props: { ...BAND.props, bodyColumns: 70 } })
+  await ui.press({ key: 'size' })
+  const svg = await ui.find({ type: 'Svg' })
+  expect(Number(String(svg?.props.source).match(/width="(\d+)"/)?.[1])).toBeLessThanOrEqual((70 - 14) * 7)
+  expect(String(svg?.props.alt)).toContain('0/6 done')
+  const row = await ui.find({ type: 'Text', text: /Richer profile/ })
+  expect(row?.text).not.toContain('general-purpose')
+  expect(row?.text).not.toContain('tools')
+  expect(await ui.find({ type: 'Button', key: 'minimize' })).toBeDefined()
+  await ui.press({ key: 'size' })
+  await ui.unmount()
+})
