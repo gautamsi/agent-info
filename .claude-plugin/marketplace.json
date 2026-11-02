@@ -1,0 +1,6 @@
+{
+  "name": "gautamsi",
+  "owner": { "name": "gautamsi" },
+  "description": "agent-info: worker progress and cost bar, and a sessions cost pane, for Claude Code",
+  "plugins": [{ "name": "agent-info", "source": "./" }]
+}
