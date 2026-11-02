@@ -250,7 +250,7 @@ test('in a narrow band the line shrinks to fit and the rows drop their details',
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop', props: { ...BAND.props, bodyColumns: 70 } })
   await ui.press({ key: 'size' })
   const svg = await ui.find({ type: 'Svg' })
-  expect(Number(String(svg?.props.source).match(/width="(\d+)"/)?.[1])).toBeLessThanOrEqual((70 - 14) * 7)
+  expect(Number(String(svg?.props.source).match(/width="(\d+)"/)?.[1])).toBeLessThanOrEqual((70 - 20) * 7)
   expect(String(svg?.props.alt)).toContain('0/6 done')
   const row = await ui.find({ type: 'Text', text: /Richer profile/ })
   expect(row?.text).not.toContain('general-purpose')

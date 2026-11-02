@@ -880,11 +880,24 @@ export const register: Register = on => {
     const isIdle = !v.hasWorkers && v.planTotal === 0
     const cost = [v.sessionText, v.workersText].filter(Boolean).join(' · ')
 
+    // Framed buttons with glyphs a size up, so they read and hit as buttons.
     const controls = (
-      <Box flexDirection="row" gap={1}>
-        <Button key="sessions" plain label="$" onPress={() => void openSessions($, false)} />
-        <Button key="size" plain label={expanded ? '▴' : '▾'} onPress={() => setExpanded($, !expanded)} />
-        <Button key="minimize" plain label="–" onPress={() => setMini($, true)} />
+      <Box flexDirection="row" gap={1} alignItems="center">
+        <Button key="sessions" variant="secondary" onPress={() => void openSessions($, false)}>
+          <Text size="heading" weight="semibold">
+            $
+          </Text>
+        </Button>
+        <Button key="size" variant="secondary" onPress={() => setExpanded($, !expanded)}>
+          <Text size="heading" weight="semibold">
+            {expanded ? '▲' : '▼'}
+          </Text>
+        </Button>
+        <Button key="minimize" variant="secondary" onPress={() => setMini($, true)}>
+          <Text size="heading" weight="semibold">
+            –
+          </Text>
+        </Button>
       </Box>
     )
 
@@ -906,7 +919,7 @@ export const register: Register = on => {
         // The picture is fitted to the band (about 7 px a column, the buttons
         // kept clear): first a shorter cost, then a shorter bar, then smaller
         // critters, then fewer of them (running ones kept, the rest as "+n").
-        const room = (cols - 14) * CHAR
+        const room = (cols - 20) * CHAR
         const accent = v.isComplete ? DONE : '#D97757'
         const tail = v.hasWorkers ? 'done' : 'steps done'
         const sizes = expanded ? [4, 2] : [2]
