@@ -255,6 +255,7 @@ test('in a narrow band the line shrinks to fit and the rows drop their details',
   const row = await ui.find({ type: 'Text', text: /Richer profile/ })
   expect(row?.text).not.toContain('general-purpose')
   expect(row?.text).not.toContain('tools')
+  expect(row?.text).toContain('Sonnet 5.5')
   expect(await ui.find({ type: 'Button', key: 'minimize' })).toBeDefined()
   await ui.press({ key: 'size' })
   await ui.unmount()

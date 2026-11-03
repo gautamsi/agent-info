@@ -148,6 +148,15 @@ function dateOf(ms: number) {
   return `${d.getMonth() + 1}/${d.getDate()} ${two(d.getHours())}:${two(d.getMinutes())}`
 }
 
+// "claude-sonnet-5-5-20260101" -> "Sonnet 5.5", "claude-3-5-haiku" -> "Haiku 3.5".
+function modelName(id: string) {
+  const m = id.toLowerCase().replace(/\[.*?\]$/, '').replace(/-v\d+(:\d+)?$/, '')
+  const family = ['fable', 'opus', 'sonnet', 'haiku'].find(f => m.includes(f))
+  if (!family) return id.replace(/^claude-/, '')
+  const version = (m.replace(family, '').match(/\d+/g) ?? []).filter(n => n.length <= 2).join('.')
+  return `${family.charAt(0).toUpperCase()}${family.slice(1)}${version ? ` ${version}` : ''}`
+}
+
 function cut(text: string, room: number) {
   if (room <= 1) return ''
   return text.length > room ? `${text.slice(0, room - 1)}…` : text
@@ -294,6 +303,7 @@ function colorOf(w: Worker, order: string[]) {
 
 function titleOf(w: Worker) {
   const parts = [`${w.type} · ${w.label}`, w.status]
+  if (w.kind === 'agent' && w.model) parts.push(modelName(w.model))
   if (w.kind === 'agent') parts.push(`${w.steps} steps · ${w.tools} tools`)
   if (w.kind === 'agent' && w.isPriced) parts.push(`≈${money(w.usd)}`)
   return parts.join(' — ')
@@ -769,7 +779,7 @@ export const register: Register = on => {
       if (e.agentId) {
         await patch($, e.agentId, w => {
           const { usd, isPriced } = priceOf(result.usage!, e.model)
-          return { ...w, steps: w.steps + 1, usd: w.usd + usd, isPriced: w.isPriced || isPriced, model: w.model || result.usage!.model }
+          return { ...w, steps: w.steps + 1, usd: w.usd + usd, isPriced: w.isPriced || isPriced, model: result.usage!.model || w.model || e.model }
         })
       } else {
         const { usd } = priceOf(result.usage, e.model)
@@ -1005,15 +1015,16 @@ export const register: Register = on => {
           const elapsed = clockOf((w.endedAt ?? v.t) - w.startedAt)
           const statusColor =
             w.status === 'running' ? 'warning' : w.status === 'waiting' ? 'suggestion' : w.status === 'done' ? 'success' : 'error'
-          // Narrow bands keep the task's name and drop the rest first: the
-          // agent type below 110 columns, the tool count below 90, the last
-          // tool below 120.
+          // Narrow bands keep the task's name and its model and drop the rest
+          // first: the agent type below 110 columns, the tool count below 90,
+          // the last tool below 120.
           const detail =
             w.kind === 'shell'
               ? cols >= 90
                 ? 'background shell'
                 : 'shell'
               : [
+                  w.model ? modelName(w.model) : '',
                   `${w.steps} steps`,
                   cols >= 90 ? `${w.tools} tools` : '',
                   cols >= 120 && isLive(w) && w.lastTool ? w.lastTool : '',
